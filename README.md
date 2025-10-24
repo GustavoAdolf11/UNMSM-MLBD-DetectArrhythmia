@@ -20,8 +20,8 @@ Este proyecto implementa un clasificador binario para detectar arritmias ventric
 
 1. Clonar el repositorio:
 ```bash
-git clone https://github.com/[tu-usuario]/detector-arritmias
-cd detector-arritmias
+git clone https://github.com/GustavoAdolf11/UNMSM-MLBD-DetectArrhythmia.git
+cd UNMSM-MLBD-DetectArrhythmia
 ```
 
 2. Crear entorno virtual:
@@ -57,9 +57,3 @@ El script entrenará el modelo y guardará:
 ## Licencia
 
 Este proyecto está bajo la Licencia MIT - ver archivo [LICENSE](LICENSE) para detalles.
-
-## Contacto
-
-[Tu Nombre] - [tu@email.com]
-
-Link del proyecto: https://github.com/[tu-usuario]/detector-arritmias
