@@ -13,10 +13,10 @@ __pycache__/
 mit-bih/
 data/
 datasets/
-models/
+#models/
 *.h5
-*.keras
-*.tflite
+#*.keras
+#*.tflite
 *.ckpt
 *.pth
 *.pkl
