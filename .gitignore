@@ -1,0 +1,40 @@
+# Entorno
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# IDE
+.ipynb_checkpoints
+.vscode/
+.idea/
+
+# Datos y modelos pesados
+mit-bih/
+data/
+datasets/
+models/
+*.h5
+*.keras
+*.tflite
+*.ckpt
+*.pth
+*.pkl
+*.npz
+
+# Config y secrets
+.env
+*.env
+
+# SO y otros
+.DS_Store
+Thumbs.db
+*.log
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+
+# Archivos de dependencias
+requirements-lock.txt
