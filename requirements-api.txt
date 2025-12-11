@@ -1,0 +1,18 @@
+# FastAPI Dependencies (versiones que no requieren Rust)
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+pydantic>=2.10.0
+pydantic-settings>=2.6.0
+
+# ML/Data Processing
+tensorflow>=2.18.0
+numpy>=1.26.0
+scipy>=1.14.0
+pandas>=2.2.0
+
+# ECG Processing
+wfdb>=4.1.0
+
+# Utilities
+python-multipart>=0.0.12
+python-dotenv>=1.0.0

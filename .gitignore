@@ -1,40 +1,74 @@
-# Entorno
-.venv/
-venv/
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# IDE
-.ipynb_checkpoints
+# Virtual Environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+detectArritmia/
+
+# IDEs
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
+.DS_Store
 
-# Datos y modelos pesados
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Environment variables
+.env
+.env.local
+
+# Logs
+*.log
+
+# Temporary test files
+*.tmp
+*.temp
+test_payload_*.json
+test_mit_bih_*.json
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Model training outputs (opcional)
+# models/*/history_*.csv
+# models/*/meta_*.json
+
+# Datos MIT-BIH
 mit-bih/
 data/
 datasets/
-#models/
-*.h5
-#*.keras
-#*.tflite
-*.ckpt
-*.pth
-*.pkl
-*.npz
-
-# Config y secrets
-.env
-*.env
-
-# SO y otros
-.DS_Store
-Thumbs.db
-*.log
-
-# Build / packaging
-build/
-dist/
-*.egg-info/
-
-# Archivos de dependencias
-requirements-lock.txt

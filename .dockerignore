@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+env/
+ENV/
+detectArritmia/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Git
+.git/
+.gitignore
+
+# Documentation (excepto README_HF.md que se convierte en README.md)
+README-API.md
+ARCHITECTURE.md
+PROJECT-STRUCTURE.md
+QUICKSTART.md
+DEPLOY.md
+DEPLOY_HUGGINGFACE.md
+DOCS-INDEX.md
+
+# Scripts de desarrollo local
+start-api.ps1
+start-api.sh
+test_api.py
+deploy-to-hf.ps1
+
+# Ejemplos y datos de prueba
+examples/
+
+# MIT-BIH raw data (solo necesitamos el modelo)
+mit-bih/
+
+# Script de entrenamiento (no necesario en producción)
+deteccionarritmias.py
+
+# Docker files
+Dockerfile
+Dockerfile.hf
+.dockerignore
