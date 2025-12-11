@@ -8,11 +8,11 @@ pinned: false
 license: mit
 ---
 
-# ECG Arrhythmia Detection API 💓
+# ECG Arrhythmia Detection API
 
 API REST para detección de arritmias cardíacas usando Deep Learning (CNN) sobre señales ECG.
 
-## 🚀 Características
+## Características
 
 - **Detección de arritmias** en señales ECG usando CNN pre-entrenada
 - **Arquitectura limpia** con Domain-Driven Design (DDD)
@@ -20,12 +20,12 @@ API REST para detección de arritmias cardíacas usando Deep Learning (CNN) sobr
 - **RuleGuard** para reducir falsos positivos
 - **API REST** con FastAPI y documentación Swagger
 
-## 📊 Tipos de Arritmias
+## Tipos de Arritmias
 
 - **N (Normal)**: Latidos normales
 - **V (Ventricular)**: Contracciones ventriculares prematuras (PVC)
 
-## 🔧 Uso de la API
+## Uso de la API
 
 ### Endpoint de Salud
 ```bash
@@ -74,27 +74,27 @@ POST /api/v1/predictions/
 }
 ```
 
-## 📚 Documentación
+## Documentación
 
 Accede a la documentación interactiva Swagger en:
 ```
 https://your-space-name.hf.space/docs
 ```
 
-## 🏗️ Arquitectura
+## Arquitectura
 
 - **Domain Layer**: Entidades y reglas de negocio
 - **Application Layer**: Casos de uso
 - **Infrastructure Layer**: Servicios ML y repositorios
 - **Presentation Layer**: API REST con FastAPI
 
-## 🧠 Modelo
+## Modelo
 
 - **Arquitectura**: CNN (Convolutional Neural Network)
 - **Entrenamiento**: MIT-BIH Arrhythmia Database
 - **Precisión**: ~95% en detección de PVCs
 
-## 📄 Licencia
+## Licencia
 
 MIT License - ver archivo LICENSE para detalles
 
