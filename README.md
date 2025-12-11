@@ -1,13 +1,3 @@
----
-title: ECG Arrhythmia Detection API
-emoji: 💓
-colorFrom: red
-colorTo: pink
-sdk: docker
-pinned: false
-license: mit
----
-
 # ECG Arrhythmia Detection API
 
 API REST para detección de arritmias cardíacas usando Deep Learning (CNN) sobre señales ECG.
