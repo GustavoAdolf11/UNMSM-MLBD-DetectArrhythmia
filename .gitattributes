@@ -1,6 +1,5 @@
 # .gitattributes para Hugging Face Spaces
 # Configuración de Git LFS para archivos grandes
-
 # Archivos de modelos
 *.keras filter=lfs diff=lfs merge=lfs -text
 *.h5 filter=lfs diff=lfs merge=lfs -text
@@ -28,4 +27,5 @@
 *.zip filter=lfs diff=lfs merge=lfs -text
 *.tar.gz filter=lfs diff=lfs merge=lfs -text
 *.tflite filter=lfs diff=lfs merge=lfs -text
+models/**/*.data-00000-of-00001 filter=lfs diff=lfs merge=lfs -text
 *.data-00000-of-00001 filter=lfs diff=lfs merge=lfs -text
