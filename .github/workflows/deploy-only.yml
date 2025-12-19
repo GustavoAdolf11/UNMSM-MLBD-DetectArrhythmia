@@ -54,4 +54,4 @@ jobs:
         
         echo "✅ Deployment completado"
         echo "🔗 Space: https://huggingface.co/spaces/GustavoAdolf/ProjectDetecArrit"
-        echo "🔗 API: https://gustavoadolf-projectdetectarrit.hf.space"
+        echo "🔗 API: https://gustavoadolf-projectdetecarrit.hf.space"
