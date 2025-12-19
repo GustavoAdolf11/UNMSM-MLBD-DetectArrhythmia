@@ -2,14 +2,38 @@
 
 ## 🎯 Inicio Rápido
 
-Comienza aquí si quieres poner en marcha la API rápidamente:
+Comienza aquí si quieres poner en marcha el proyecto:
 
 1. **[QUICKSTART.md](QUICKSTART.md)** - Guía de inicio en 3 pasos
    - Instalación local
    - Docker
    - Primeras pruebas
 
+2. **🆕 [MLOPS_QUICKSTART.md](MLOPS_QUICKSTART.md)** - Setup MLOps en 5 minutos ⚡
+   - Instalación MLflow
+   - Primer entrenamiento con tracking
+   - Ver experimentos
+
 ## 📖 Documentación Principal
+
+### 🆕 MLOps (Machine Learning Operations)
+
+- **[MLOPS_SUMMARY.md](MLOPS_SUMMARY.md)** 🌟 - Resumen completo de implementación MLOps
+  - Qué se implementó
+  - Archivos nuevos creados
+  - Cómo usar cada funcionalidad
+  
+- **[MLOPS_QUICKSTART.md](MLOPS_QUICKSTART.md)** - Inicio rápido (5 minutos)
+  - Instalación de dependencias
+  - Entrenar con tracking automático
+  - Ver resultados en MLflow UI
+  
+- **[MLOPS_GUIDE.md](MLOPS_GUIDE.md)** - Guía completa MLOps (30 minutos)
+  - Tracking de experimentos
+  - Comparación de modelos
+  - CI/CD con GitHub Actions
+  - Monitoreo de drift
+  - Optimización de hiperparámetros
 
 ### Para Usuarios de la API
 

@@ -52,6 +52,24 @@ mit-bih/
 
 # Script de entrenamiento (no necesario en producción)
 deteccionarritmias.py
+optimize_hyperparameters.py
+compare_models.py
+ejemplos_mlflow.py
+
+# MLOps artifacts (NO necesarios en producción)
+mlruns/
+monitoring/
+.github/
+verify_mlops_setup.py
+
+# MLOps documentation
+MLOPS_GUIDE.md
+MLOPS_QUICKSTART.md
+MLOPS_SUMMARY.md
+SETUP.md
+CLEANUP_SUMMARY.md
+mlflow_config.py
+start_mlflow.ps1
 
 # Docker files
 Dockerfile

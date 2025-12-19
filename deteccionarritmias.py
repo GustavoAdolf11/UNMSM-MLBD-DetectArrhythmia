@@ -22,6 +22,14 @@ from imblearn.over_sampling import RandomOverSampler
 import tensorflow as tf
 from tensorflow.keras import layers, callbacks, optimizers, regularizers, Input, Model
 
+# MLOps: MLflow tracking
+import mlflow
+import mlflow.keras
+from datetime import datetime
+
+# Configurar MLflow
+mlflow.set_tracking_uri("file:./mlruns")  # Almacenamiento local
+mlflow.set_experiment("deteccion_arritmias_ecg")
 
 BASE_PATH = os.path.join(os.path.dirname(__file__), 'mit-bih')
 SAVE_DIR  = os.path.join(os.path.dirname(__file__), 'models', 'ecg_nv_cnn')
@@ -138,6 +146,46 @@ yte_bin = (yte == 'V').astype(np.int32)
 Xtr_sig_cnn = np.expand_dims(Xtr_sig, -1).astype(np.float32)
 Xte_sig_cnn = np.expand_dims(Xte_sig, -1).astype(np.float32)
 
+# Definir objetivos de umbral (necesario antes de MLflow)
+TARGET_PREC = 0.83
+TARGET_REC  = 0.85
+
+# ==================== MLOps: Iniciar experimento MLflow ====================
+run_name = f"CNN_v7_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+mlflow.start_run(run_name=run_name)
+
+print(f"\n🚀 MLflow Run iniciado: {run_name}")
+print(f"   Run ID: {mlflow.active_run().info.run_id}")
+
+# Log de hiperparámetros
+mlflow.log_params({
+    "deriv_idx": DERIV_IDX,
+    "fs": FS,
+    "win": WIN,
+    "use_augment": USE_AUGMENT,
+    "use_ruleguard": USE_RULEGUARD,
+    "random_seed": RANDOM_SEED,
+    "focal_gamma": 2.0,
+    "focal_alpha": 0.35,
+    "target_prec": TARGET_PREC,
+    "target_rec": TARGET_REC,
+    "batch_size": 256,
+    "epochs_max": 30,
+    "lr_initial": 1e-3,
+    "dropout_rate": 0.35,
+    "l2_regularization": 1e-4
+})
+
+# Log de distribución de datos
+mlflow.log_metrics({
+    "train_samples_total": int(Xtr_sig.shape[0]),
+    "test_samples_total": int(Xte_sig.shape[0]),
+    "train_V_original": int((ytr == 'V').sum()),
+    "train_N_original": int((ytr == 'N').sum()),
+    "test_V_samples": int((yte == 'V').sum()),
+    "test_N_samples": int((yte == 'N').sum())
+})
+
 # Data augmentation (opcional) y oversampling real (sin SMOTE)
 rng = np.random.default_rng(RANDOM_SEED)
 
@@ -184,6 +232,13 @@ if USE_AUGMENT:
 
 print("Distribución balanceada:", Counter(ytr_bin_bal))
 print("Shapes:", Xtr_sig_bal.shape, Xtr_rr_bal.shape, Xte_sig_cnn.shape)
+
+# Log datos balanceados
+mlflow.log_metrics({
+    "train_V_balanced": int((ytr_bin_bal == 1).sum()),
+    "train_N_balanced": int((ytr_bin_bal == 0).sum()),
+    "balance_ratio": float((ytr_bin_bal == 1).sum() / (ytr_bin_bal == 0).sum())
+})
 
 # [C06] Modelo CNN-1D (señal + RR)
 tf.keras.backend.clear_session()
@@ -243,10 +298,18 @@ hist = model.fit(
     verbose=1
 )
 
-# [C09] Selección de umbral en distribución real + (opcional) Platt
-TARGET_PREC = 0.83
-TARGET_REC  = 0.85
+# Log métricas de entrenamiento por época
+for epoch in range(len(hist.history['loss'])):
+    mlflow.log_metrics({
+        "train_loss": float(hist.history['loss'][epoch]),
+        "train_accuracy": float(hist.history['accuracy'][epoch]),
+        "train_pr_auc": float(hist.history['pr_auc'][epoch]),
+        "val_loss": float(hist.history['val_loss'][epoch]),
+        "val_accuracy": float(hist.history['val_accuracy'][epoch]),
+        "val_pr_auc": float(hist.history['val_pr_auc'][epoch])
+    }, step=epoch)
 
+# [C09] Selección de umbral en distribución real + (opcional) Platt
 # hold-out del TRAIN ORIGINAL (sin SMOTE/oversampling) ~15%
 sss = StratifiedShuffleSplit(n_splits=1, test_size=0.15, random_state=RANDOM_SEED)
 for tr_idx, val_idx in sss.split(Xtr_sig, ytr_bin):
@@ -281,6 +344,14 @@ else:
     msg = "Mejor F1 posible (no alcanzó ambas metas)"
 
 print(f"[Umbral] thr_opt={thr_opt:.4f} | Prec_val={p_val:.3f} | Rec_val={r_val:.3f} | {msg}")
+
+# Log del umbral óptimo
+mlflow.log_metrics({
+    "threshold_optimal": float(thr_opt),
+    "threshold_precision_val": float(p_val),
+    "threshold_recall_val": float(r_val)
+})
+mlflow.log_param("threshold_selection_method", msg)
 
 # Predicción binaria en TEST (sin post-filtro aún)
 ypred_bin = (proba_test >= thr_opt).astype(np.int32)
@@ -328,6 +399,13 @@ if USE_RULEGUARD:
 
     rr_lo, rr_hi, qrs_thr = best[1]
     print(f"[RuleGuard-V] RR∈({rr_lo:.2f},{rr_hi:.2f}), QRS<{qrs_thr} ms")
+    
+    # Log parámetros de RuleGuard
+    mlflow.log_params({
+        "ruleguard_rr_lo": float(rr_lo),
+        "ruleguard_rr_hi": float(rr_hi),
+        "ruleguard_qrs_thr": int(qrs_thr)
+    })
 
     rr_ratio_te = Xte_rr[:,1] / (Xte_rr[:,0] + 1e-6)
     qrs_te_ms   = np.array([qrs_width_ms_from_window(w) for w in Xte_sig])
@@ -360,11 +438,37 @@ def show_results(y_true, y_pred, title="CNN N vs V"):
 print("===> Resultados SIN/CON RuleGuard (según flag) <===")
 show_results(yte_bin, ypred_rg, title="CNN N vs V")
 
+# Log métricas finales de test
+acc_final = accuracy_score(yte_bin, ypred_rg)
+cm_final = confusion_matrix(yte_bin, ypred_rg, labels=[0,1])
+prec_V = precision_score(yte_bin, ypred_rg, pos_label=1)
+rec_V = recall_score(yte_bin, ypred_rg, pos_label=1)
+f1_V = 2 * (prec_V * rec_V) / (prec_V + rec_V + 1e-9)
+prec_N = precision_score(yte_bin, ypred_rg, pos_label=0)
+rec_N = recall_score(yte_bin, ypred_rg, pos_label=0)
+f1_N = 2 * (prec_N * rec_N) / (prec_N + rec_N + 1e-9)
+
+mlflow.log_metrics({
+    "test_accuracy": float(acc_final),
+    "test_precision_V": float(prec_V),
+    "test_recall_V": float(rec_V),
+    "test_f1_V": float(f1_V),
+    "test_precision_N": float(prec_N),
+    "test_recall_N": float(rec_N),
+    "test_f1_N": float(f1_N),
+    "test_TN": int(cm_final[0,0]),
+    "test_FP": int(cm_final[0,1]),
+    "test_FN": int(cm_final[1,0]),
+    "test_TP": int(cm_final[1,1])
+})
+
 # Curvas de entrenamiento
-plt.figure(figsize=(10,4))
+fig_training = plt.figure(figsize=(10,4))
 plt.subplot(1,2,1); plt.plot(hist.history['loss'], label='train'); plt.plot(hist.history['val_loss'], label='val'); plt.title('Pérdida'); plt.xlabel('Época'); plt.ylabel('Pérdida'); plt.legend()
 plt.subplot(1,2,2); plt.plot(hist.history['accuracy'], label='train'); plt.plot(hist.history['val_accuracy'], label='val'); plt.title('Accuracy'); plt.xlabel('Época'); plt.ylabel('Accuracy'); plt.legend()
-plt.tight_layout(); plt.show()
+plt.tight_layout()
+mlflow.log_figure(fig_training, "training_curves.png")
+plt.show()
 
 # [C12] Guardar modelo + metadatos
 import pandas as pd
@@ -372,11 +476,19 @@ keras_path = os.path.join(SAVE_DIR, 'model_v7.keras')
 model.save(keras_path)
 print("Guardado:", keras_path)
 
+# Log modelo en MLflow con registro automático
+mlflow.keras.log_model(
+    model, 
+    "model",
+    registered_model_name="ECG_Arritmias_NvsV"
+)
+
 savedmodel_dir = os.path.join(SAVE_DIR, 'saved_model_v7')
 model.export(savedmodel_dir)
 print("Guardado:", savedmodel_dir)
 
-pd.DataFrame(hist.history).to_csv(os.path.join(SAVE_DIR, 'history_v7.csv'), index=False)
+history_csv_path = os.path.join(SAVE_DIR, 'history_v7.csv')
+pd.DataFrame(hist.history).to_csv(history_csv_path, index=False)
 meta = {
     "classes": ["N","V"],
     "fs": FS, "win": WIN, "deriv_idx": DERIV_IDX,
@@ -385,11 +497,19 @@ meta = {
     "inputs": {"sig": [WIN,1], "rr": [3]},
     "augmentation": bool(USE_AUGMENT),
     "ruleguard": bool(USE_RULEGUARD),
-    "threshold_note": "thr_opt seleccionado en validación de distribución real + Platt"
+    "threshold_note": "thr_opt seleccionado en validación de distribución real + Platt",
+    "mlflow_run_id": mlflow.active_run().info.run_id,
+    "timestamp": datetime.now().isoformat()
 }
-with open(os.path.join(SAVE_DIR, 'meta_v7.json'), 'w') as f:
+meta_json_path = os.path.join(SAVE_DIR, 'meta_v7.json')
+with open(meta_json_path, 'w') as f:
     json.dump(meta, f, indent=2)
 print("Guardado history_v7.csv y meta_v7.json")
+
+# Log artefactos en MLflow
+mlflow.log_artifact(keras_path, "models")
+mlflow.log_artifact(history_csv_path, "metrics")
+mlflow.log_artifact(meta_json_path, "metadata")
 
 # TFLite
 tflite_path = os.path.join(SAVE_DIR, 'model_v7.tflite')
@@ -397,4 +517,15 @@ converter = tf.lite.TFLiteConverter.from_saved_model(savedmodel_dir)
 tflite_model = converter.convert()
 with open(tflite_path, 'wb') as f:
     f.write(tflite_model)
-print("Guardado TFLite:", tflite_path, "tamaño:", round(len(tflite_model)/1024,1), "KB")
+tflite_size_kb = round(len(tflite_model)/1024, 1)
+print("Guardado TFLite:", tflite_path, "tamaño:", tflite_size_kb, "KB")
+
+# Log TFLite y su tamaño
+mlflow.log_artifact(tflite_path, "models")
+mlflow.log_metric("model_size_kb", tflite_size_kb)
+
+# Finalizar run de MLflow
+mlflow.end_run()
+print(f"\n✅ Experimento MLflow completado")
+print(f"   Para ver resultados: mlflow ui")
+print(f"   Luego abre: http://127.0.0.1:5000")
