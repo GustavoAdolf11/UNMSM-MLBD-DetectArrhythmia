@@ -1,18 +1,7 @@
 name: MLOps - Entrenamiento y Validación
 
 on:
-  push:
-    branches: [main, develop]
-    paths:
-      - 'src/**'
-      - 'deteccionarritmias.py'
-      - 'requirements-api.txt'
-  pull_request:
-    branches: [main]
-  schedule:
-    # Reentrenamiento semanal (domingos a las 2 AM)
-    - cron: '0 2 * * 0'
-  workflow_dispatch:  # Permitir ejecución manual
+  workflow_dispatch:  # Solo ejecución manual (datos MIT-BIH no están en repo)
 
 jobs:
   train-and-validate:

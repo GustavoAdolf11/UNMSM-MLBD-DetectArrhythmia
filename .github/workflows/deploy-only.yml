@@ -1,0 +1,57 @@
+name: Deploy to Hugging Face (Manual)
+
+# Workflow simplificado: solo despliega el modelo actual sin reentrenar
+on:
+  workflow_dispatch:  # Solo ejecución manual
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout código
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        lfs: true
+    
+    - name: 📦 Preparar archivos para HF
+      run: |
+        echo "📝 Copiando archivos para Hugging Face..."
+        cp README_HF.md README.md
+        cp Dockerfile.hf Dockerfile
+        echo "✅ Archivos preparados"
+    
+    - name: 🔐 Configurar credenciales de HF
+      run: |
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git config --global user.name "MLOps Bot"
+        git remote add hf https://GustavoAdolf:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/GustavoAdolf/ProjectDetecArrit || true
+    
+    - name: 🚀 Deploy a Hugging Face Spaces
+      run: |
+        echo "📤 Desplegando a Hugging Face..."
+        
+        # Verificar que el modelo existe
+        if [ ! -f "models/ecg_nv_cnn/model_v7.keras" ]; then
+          echo "❌ Error: Modelo no encontrado"
+          exit 1
+        fi
+        
+        # Agregar archivos
+        git add models/ecg_nv_cnn/model_v7.keras
+        git add README.md
+        git add Dockerfile
+        git add app_hf.py
+        git add requirements-api.txt
+        
+        # Commit
+        COMMIT_MSG="🤖 Deploy: Update model and API"
+        git commit -m "$COMMIT_MSG" || echo "Sin cambios para commit"
+        
+        # Push a Hugging Face
+        git push hf HEAD:main --force
+        
+        echo "✅ Deployment completado"
+        echo "🔗 Space: https://huggingface.co/spaces/GustavoAdolf/ProjectDetecArrit"
+        echo "🔗 API: https://gustavoadolf-projectdetectarrit.hf.space"

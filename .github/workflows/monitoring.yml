@@ -1,10 +1,7 @@
 name: Monitoreo Continuo - Data Drift
 
 on:
-  schedule:
-    # Ejecutar monitoreo cada lunes a las 3 AM
-    - cron: '0 3 * * 1'
-  workflow_dispatch:  # Permitir ejecución manual
+  workflow_dispatch:  # Solo ejecución manual (requiere datos en producción)
 
 jobs:
   monitor-drift:

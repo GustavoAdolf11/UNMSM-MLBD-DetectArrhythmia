@@ -1,15 +1,8 @@
 name: MLOps - Auto Deploy to Hugging Face
 
-# Trigger automático al hacer push a main
+# Solo ejecución MANUAL (sin entrenamiento automático)
+# Los datos MIT-BIH no están en GitHub
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'deteccionarritmias.py'
-      - 'src/**'
-  schedule:
-    # Re-entrenamiento y deployment semanal (domingos a las 3 AM)
-    - cron: '0 3 * * 0'
   workflow_dispatch:  # Permitir ejecución manual desde GitHub UI
 
 jobs:
