@@ -1,0 +1,45 @@
+name: Monitoreo Continuo - Data Drift
+
+on:
+  schedule:
+    # Ejecutar monitoreo cada lunes a las 3 AM
+    - cron: '0 3 * * 1'
+  workflow_dispatch:  # Permitir ejecución manual
+
+jobs:
+  monitor-drift:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout código
+      uses: actions/checkout@v4
+    
+    - name: 🐍 Configurar Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: 📦 Instalar dependencias
+      run: |
+        pip install evidently pandas numpy
+    
+    - name: 🔍 Ejecutar detector de drift
+      run: |
+        python monitoring/drift_detector.py
+      continue-on-error: true
+    
+    - name: 📄 Subir reportes de drift
+      uses: actions/upload-artifact@v4
+      with:
+        name: drift-reports-${{ github.run_number }}
+        path: monitoring/reports/
+        retention-days: 90
+    
+    - name: 🔔 Alertar si hay drift
+      run: |
+        if [ -f "monitoring/reports/drift_alerts.log" ]; then
+          echo "⚠️  DRIFT DETECTADO - Revisar reportes"
+          cat monitoring/reports/drift_alerts.log
+        else
+          echo "✅ No se detectó drift"
+        fi

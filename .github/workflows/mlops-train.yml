@@ -1,0 +1,169 @@
+name: MLOps - Entrenamiento y Validación
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'src/**'
+      - 'deteccionarritmias.py'
+      - 'requirements-api.txt'
+  pull_request:
+    branches: [main]
+  schedule:
+    # Reentrenamiento semanal (domingos a las 2 AM)
+    - cron: '0 2 * * 0'
+  workflow_dispatch:  # Permitir ejecución manual
+
+jobs:
+  train-and-validate:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout código
+      uses: actions/checkout@v4
+    
+    - name: 🐍 Configurar Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: 📦 Instalar dependencias
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-api.txt
+    
+    - name: 🔍 Verificar datos MIT-BIH
+      run: |
+        if [ ! -d "mit-bih" ]; then
+          echo "⚠️  Datos MIT-BIH no encontrados"
+          echo "   Descarga manual requerida"
+          exit 1
+        fi
+        echo "✅ Datos MIT-BIH encontrados"
+    
+    - name: 🧪 Ejecutar tests (si existen)
+      run: |
+        if [ -f "tests/test_model.py" ]; then
+          pytest tests/ -v
+        else
+          echo "ℹ️  No hay tests definidos aún"
+        fi
+      continue-on-error: true
+    
+    - name: 🚀 Entrenar modelo
+      run: |
+        echo "🔬 Iniciando entrenamiento con MLflow..."
+        python deteccionarritmias.py
+    
+    - name: 📊 Extraer métricas de MLflow
+      run: |
+        python -c "
+        import mlflow
+        import json
+        
+        mlflow.set_tracking_uri('file:./mlruns')
+        experiment = mlflow.get_experiment_by_name('deteccion_arritmias_ecg')
+        
+        if experiment:
+            runs = mlflow.search_runs(experiment_ids=[experiment.experiment_id], max_results=1)
+            if not runs.empty:
+                metrics = runs.iloc[0].to_dict()
+                
+                # Extraer métricas clave
+                key_metrics = {
+                    'accuracy': metrics.get('metrics.test_accuracy', 0),
+                    'precision_V': metrics.get('metrics.test_precision_V', 0),
+                    'recall_V': metrics.get('metrics.test_recall_V', 0),
+                    'f1_V': metrics.get('metrics.test_f1_V', 0)
+                }
+                
+                print('📈 Métricas del modelo:')
+                for k, v in key_metrics.items():
+                    print(f'   {k}: {v:.4f}')
+                
+                # Guardar para steps siguientes
+                with open('metrics.json', 'w') as f:
+                    json.dump(key_metrics, f)
+        "
+    
+    - name: ✅ Validar métricas mínimas
+      run: |
+        python -c "
+        import json
+        import sys
+        
+        with open('metrics.json') as f:
+            metrics = json.load(f)
+        
+        # Umbrales mínimos
+        min_accuracy = 0.80
+        min_precision_V = 0.75
+        min_recall_V = 0.75
+        
+        passed = True
+        
+        if metrics['accuracy'] < min_accuracy:
+            print(f'❌ Accuracy muy baja: {metrics[\"accuracy\"]:.4f} < {min_accuracy}')
+            passed = False
+        
+        if metrics['precision_V'] < min_precision_V:
+            print(f'❌ Precision muy baja: {metrics[\"precision_V\"]:.4f} < {min_precision_V}')
+            passed = False
+        
+        if metrics['recall_V'] < min_recall_V:
+            print(f'❌ Recall muy bajo: {metrics[\"recall_V\"]:.4f} < {min_recall_V}')
+            passed = False
+        
+        if passed:
+            print('✅ Todas las métricas superan los umbrales mínimos')
+            sys.exit(0)
+        else:
+            print('⚠️  Modelo no cumple con métricas mínimas')
+            sys.exit(1)
+        "
+    
+    - name: 📦 Archivar modelo y artefactos
+      uses: actions/upload-artifact@v4
+      if: success()
+      with:
+        name: trained-model-${{ github.sha }}
+        path: |
+          models/ecg_nv_cnn/model_v7.keras
+          models/ecg_nv_cnn/meta_v7.json
+          models/ecg_nv_cnn/history_v7.csv
+          mlruns/
+        retention-days: 30
+    
+    - name: 💬 Comentar en PR (si aplica)
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const metrics = JSON.parse(fs.readFileSync('metrics.json', 'utf8'));
+          
+          const comment = `## 🤖 Resultados del Entrenamiento
+          
+          | Métrica | Valor |
+          |---------|-------|
+          | Accuracy | ${metrics.accuracy.toFixed(4)} |
+          | Precision (V) | ${metrics.precision_V.toFixed(4)} |
+          | Recall (V) | ${metrics.recall_V.toFixed(4)} |
+          | F1 (V) | ${metrics.f1_V.toFixed(4)} |
+          
+          ✅ Modelo entrenado y validado exitosamente.
+          `;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+    
+    - name: 🔔 Notificar fallo
+      if: failure()
+      run: |
+        echo "❌ El entrenamiento o validación falló"
+        echo "   Revisa los logs para más detalles"

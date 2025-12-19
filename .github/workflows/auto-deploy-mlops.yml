@@ -1,0 +1,174 @@
+name: MLOps - Auto Deploy to Hugging Face
+
+# Trigger automático al hacer push a main
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'deteccionarritmias.py'
+      - 'src/**'
+  schedule:
+    # Re-entrenamiento y deployment semanal (domingos a las 3 AM)
+    - cron: '0 3 * * 0'
+  workflow_dispatch:  # Permitir ejecución manual desde GitHub UI
+
+jobs:
+  train-validate-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    # ============================================
+    # 1. PREPARACIÓN
+    # ============================================
+    - name: 📥 Checkout código
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Historial completo para Git
+        lfs: true       # Git LFS para modelos grandes
+    
+    - name: 🐍 Setup Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: 📦 Instalar dependencias
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-api.txt
+        echo "✅ Dependencias instaladas"
+    
+    # ============================================
+    # 2. ENTRENAMIENTO CON MLFLOW
+    # ============================================
+    - name: 🧠 Entrenar modelo con MLflow
+      run: |
+        echo "🚀 Iniciando entrenamiento..."
+        python deteccionarritmias.py
+        echo "✅ Entrenamiento completado"
+    
+    # ============================================
+    # 3. SELECCIÓN DEL MEJOR MODELO
+    # ============================================
+    - name: 🏆 Seleccionar mejor modelo de MLflow
+      id: select_model
+      run: |
+        echo "🔍 Buscando mejor modelo en MLflow..."
+        python copy_best_model.py
+        
+        # Leer métricas del modelo seleccionado
+        if [ -f .mlflow_deploy_metrics.json ]; then
+          F1_V=$(python -c "import json; print(json.load(open('.mlflow_deploy_metrics.json'))['f1_v'])")
+          ACCURACY=$(python -c "import json; print(json.load(open('.mlflow_deploy_metrics.json'))['accuracy'])")
+          
+          echo "f1_v=$F1_V" >> $GITHUB_OUTPUT
+          echo "accuracy=$ACCURACY" >> $GITHUB_OUTPUT
+          
+          echo "✅ Modelo seleccionado:"
+          echo "   F1-Score V: $F1_V"
+          echo "   Accuracy: $ACCURACY"
+        else
+          echo "❌ Error: No se pudo seleccionar modelo"
+          exit 1
+        fi
+    
+    # ============================================
+    # 4. VALIDACIÓN DE MÉTRICAS
+    # ============================================
+    - name: ✅ Validar métricas mínimas
+      run: |
+        F1_V=${{ steps.select_model.outputs.f1_v }}
+        ACCURACY=${{ steps.select_model.outputs.accuracy }}
+        
+        echo "📊 Validando métricas del modelo..."
+        
+        # Umbrales mínimos (ajusta según tus necesidades)
+        MIN_F1_V=0.70
+        MIN_ACCURACY=0.90
+        
+        if (( $(echo "$F1_V < $MIN_F1_V" | bc -l) )); then
+          echo "❌ F1-Score V ($F1_V) < mínimo ($MIN_F1_V)"
+          exit 1
+        fi
+        
+        if (( $(echo "$ACCURACY < $MIN_ACCURACY" | bc -l) )); then
+          echo "❌ Accuracy ($ACCURACY) < mínimo ($MIN_ACCURACY)"
+          exit 1
+        fi
+        
+        echo "✅ Métricas aprobadas para producción"
+    
+    # ============================================
+    # 5. PREPARAR ARCHIVOS PARA HUGGING FACE
+    # ============================================
+    - name: 📦 Preparar archivos para HF
+      run: |
+        echo "📝 Copiando archivos para Hugging Face..."
+        cp README_HF.md README.md
+        cp Dockerfile.hf Dockerfile
+        echo "✅ Archivos preparados"
+    
+    # ============================================
+    # 6. CONFIGURAR GIT PARA DEPLOYMENT
+    # ============================================
+    - name: 🔐 Configurar credenciales de HF
+      run: |
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git config --global user.name "MLOps Bot"
+        
+        # Configurar token de Hugging Face (desde Secrets)
+        git remote add hf https://GustavoAdolf:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/GustavoAdolf/ProjectDetecArrit || true
+    
+    # ============================================
+    # 7. DEPLOYMENT A HUGGING FACE
+    # ============================================
+    - name: 🚀 Deploy a Hugging Face Spaces
+      run: |
+        F1_V=${{ steps.select_model.outputs.f1_v }}
+        ACCURACY=${{ steps.select_model.outputs.accuracy }}
+        
+        echo "📤 Desplegando a Hugging Face..."
+        
+        # Agregar archivos modificados
+        git add models/ecg_nv_cnn/model_v7.keras
+        git add README.md
+        git add Dockerfile
+        
+        # Commit con métricas
+        COMMIT_MSG="🤖 Auto-deploy: MLflow model (F1-V: $F1_V, Acc: $ACCURACY)"
+        git commit -m "$COMMIT_MSG" || echo "Sin cambios para commit"
+        
+        # Push a Hugging Face
+        git push hf HEAD:main --force
+        
+        echo "✅ Deployment completado"
+        echo "🔗 Space: https://huggingface.co/spaces/GustavoAdolf/ProjectDetecArrit"
+    
+    # ============================================
+    # 8. NOTIFICACIÓN DE RESULTADO
+    # ============================================
+    - name: 📢 Resumen del deployment
+      if: success()
+      run: |
+        echo "╔════════════════════════════════════════╗"
+        echo "║  ✅ DEPLOYMENT EXITOSO                ║"
+        echo "╚════════════════════════════════════════╝"
+        echo ""
+        echo "📊 Modelo desplegado:"
+        echo "   F1-Score V: ${{ steps.select_model.outputs.f1_v }}"
+        echo "   Accuracy: ${{ steps.select_model.outputs.accuracy }}"
+        echo ""
+        echo "🔗 URLs:"
+        echo "   Space: https://huggingface.co/spaces/GustavoAdolf/ProjectDetecArrit"
+        echo "   API: https://gustavoadolf-projectdetectarrit.hf.space"
+        echo ""
+        echo "⏳ El build en HF puede tardar 5-10 minutos"
+    
+    - name: ❌ Notificar fallo
+      if: failure()
+      run: |
+        echo "╔════════════════════════════════════════╗"
+        echo "║  ❌ DEPLOYMENT FALLÓ                  ║"
+        echo "╚════════════════════════════════════════╝"
+        echo ""
+        echo "Revisa los logs arriba para más detalles"
