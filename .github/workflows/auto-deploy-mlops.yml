@@ -53,13 +53,19 @@ jobs:
         if [ -f .mlflow_deploy_metrics.json ]; then
           F1_V=$(python -c "import json; print(json.load(open('.mlflow_deploy_metrics.json'))['f1_v'])")
           ACCURACY=$(python -c "import json; print(json.load(open('.mlflow_deploy_metrics.json'))['accuracy'])")
+          PRECISION_V=$(python -c "import json; print(json.load(open('.mlflow_deploy_metrics.json'))['precision_v'])")
+          RECALL_V=$(python -c "import json; print(json.load(open('.mlflow_deploy_metrics.json'))['recall_v'])")
           
           echo "f1_v=$F1_V" >> $GITHUB_OUTPUT
           echo "accuracy=$ACCURACY" >> $GITHUB_OUTPUT
+          echo "precision_v=$PRECISION_V" >> $GITHUB_OUTPUT
+          echo "recall_v=$RECALL_V" >> $GITHUB_OUTPUT
           
           echo "✅ Modelo seleccionado:"
-          echo "   F1-Score V: $F1_V"
-          echo "   Accuracy: $ACCURACY"
+          echo "   F1-Score V:  $F1_V"
+          echo "   Precision V: $PRECISION_V"
+          echo "   Recall V:    $RECALL_V"
+          echo "   Accuracy:    $ACCURACY"
         else
           echo "❌ Error: No se pudo seleccionar modelo"
           exit 1
@@ -148,8 +154,10 @@ jobs:
         echo "╚════════════════════════════════════════╝"
         echo ""
         echo "📊 Modelo desplegado:"
-        echo "   F1-Score V: ${{ steps.select_model.outputs.f1_v }}"
-        echo "   Accuracy: ${{ steps.select_model.outputs.accuracy }}"
+        echo "   F1-Score V:  ${{ steps.select_model.outputs.f1_v }}"
+        echo "   Precision V: ${{ steps.select_model.outputs.precision_v }}"
+        echo "   Recall V:    ${{ steps.select_model.outputs.recall_v }}"
+        echo "   Accuracy:    ${{ steps.select_model.outputs.accuracy }}"
         echo ""
         echo "🔗 URLs:"
         echo "   Space: https://huggingface.co/spaces/GustavoAdolf/ProjectDetecArrit"

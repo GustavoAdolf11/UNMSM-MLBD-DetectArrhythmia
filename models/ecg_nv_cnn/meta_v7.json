@@ -10,26 +10,21 @@
     100,
     101,
     102,
-    103,
     104,
-    105,
     106,
     107,
     108,
     109,
     111,
     112,
-    113,
     114,
     115,
     116,
-    117,
     118,
     119,
     121,
     122,
-    123,
-    124
+    123
   ],
   "test_records": [
     200,
@@ -70,5 +65,7 @@
   },
   "augmentation": true,
   "ruleguard": true,
-  "threshold_note": "thr_opt seleccionado en validaci\u00f3n de distribuci\u00f3n real + Platt"
+  "threshold_note": "thr_opt seleccionado en validaci\u00f3n de distribuci\u00f3n real + Platt",
+  "mlflow_run_id": "2e55a2398a734cbbb8a27f77a7af4d2e",
+  "timestamp": "2025-12-26T22:15:54.860742"
 }
